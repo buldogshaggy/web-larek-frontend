@@ -26,12 +26,11 @@ const modalContent = ensureElement('.modal__content', modalContainer);
 
 // Инициализация корзины
 const basketElement = cloneTemplate(basketTemplate);
-document.body.appendChild(basketElement);
 const basket = new Basket(basketElement, events);
+const headerBasket = ensureElement<HTMLElement>('.header__basket');
 
 // Инициализация заказа
 const orderElement = cloneTemplate(orderTemplate);
-document.body.appendChild(orderElement);
 const order = new Order(orderElement, events);
 
 // Загрузка товаров
@@ -39,40 +38,61 @@ appData.getProducts()
     .then(products => {
         galleryContainer.innerHTML = '';
         products.forEach(item => {
-            const card = new Card(cardCatalogTemplate, item, (item) => {
-                console.log('Card clicked, emitting event'); // Отладочное сообщение
-                events.emit('card:open', item);
+            const card = new Card(cardCatalogTemplate, item, (product) => {
+                events.emit('card:open', product);
             });
+            
+            // Добавляем карточку в DOM
             galleryContainer.appendChild(card.render());
         });
     })
-    .catch(err => {
-        console.error('Ошибка загрузки товаров:', err);
-    });
+    .catch(err => console.error('Ошибка загрузки товаров:', err));
 
-// Обработчик открытия карточки
+// Модифицируем обработчик открытия карточки
 events.on('card:open', (item: IProduct) => {
-    console.log('Opening card:', item); // Отладочное сообщение
+    //Блокировка прокрутки страницы
+    document.body.style.overflow = 'hidden';
 
-    // Очищаем содержимое модального окна
     modalContent.innerHTML = '';
-    
-    // Создаем карточку для превью
     const previewCard = new Card(cardPreviewTemplate, item);
+    
+    // Добавляем кнопку "В корзину"
+    const addButton = previewCard.render().querySelector('.card__button');
+    if (addButton) {
+        addButton.addEventListener('click', (e) => {
+            // e.stopPropagation();
+            events.emit('card:add', item);
+            modalContainer.classList.remove('modal_active');
+
+            // Разблокировка прокрутки при закрытии через крестик
+            document.body.style.overflow = '';
+        });
+    }
+    
     modalContent.appendChild(previewCard.render());
-    
-    // Показываем модальное окно
     modalContainer.classList.add('modal_active');
+
     
-    // Добавляем обработчик закрытия
+    // Обработчик закрытия
     const closeButton = ensureElement<HTMLButtonElement>('.modal__close', modalContainer);
-    closeButton.onclick = () => {
-        console.log('Closing modal'); // Отладочное сообщение
+    closeButton.onclick = (e) => {
+        e.stopPropagation();
         modalContainer.classList.remove('modal_active');
+        // Разблокировка прокрутки при закрытии через крестик
+        document.body.style.overflow = '';
     };
+
+    // Дополнительно: обработчик закрытия при клике на оверлей
+    modalContainer.addEventListener('click', (e) => {
+        if (e.target === modalContainer) {
+            e.stopPropagation();
+            modalContainer.classList.remove('modal_active');
+            // Разблокировка прокрутки при закрытии по оверлею
+            document.body.style.overflow = '';
+        }
+    });
 });
 
-// Другие обработчики событий
 events.on('basket:changed', () => {
     basket.toggleButton(basket.items.length > 0);
 });
@@ -82,4 +102,45 @@ events.on('order:submit', (order: IOrder) => {
         .then(result => {
             events.emit('order:success', result);
         });
+});
+
+// Обработчик добавления в корзину
+events.on('card:add', (item: IProduct) => {
+    basket.addItem(item);
+});
+
+// Обработчик удаления из корзины
+basketElement.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('basket__item-delete')) {
+        const id = target.dataset.id;
+        if (id) basket.removeItem(id);
+    }
+});
+
+headerBasket.addEventListener('click', () => {
+    // Блокировка прокрутки страницы
+    document.body.style.overflow = 'hidden';
+    
+    // Очищаем и заполняем модальное окно содержимым корзины
+    modalContent.innerHTML = '';
+    modalContent.appendChild(basketElement); // Используем basketElement вместо basket.render()
+    modalContainer.classList.add('modal_active');
+
+    // Обработчик закрытия
+    const closeButton = ensureElement<HTMLButtonElement>('.modal__close', modalContainer);
+    closeButton.onclick = (e) => {
+        e.stopPropagation();
+        modalContainer.classList.remove('modal_active');
+        document.body.style.overflow = '';
+    };
+
+    // Обработчик закрытия при клике на оверлей
+    modalContainer.addEventListener('click', (e) => {
+        if (e.target === modalContainer) {
+            e.stopPropagation();
+            modalContainer.classList.remove('modal_active');
+            document.body.style.overflow = '';
+        }
+    });
 });

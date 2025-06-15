@@ -35,3 +35,7 @@ export interface IOrderResult {
     id: string;
     total: number;
 }
+
+export interface IBasketItem extends IProduct {
+    count: number;
+}

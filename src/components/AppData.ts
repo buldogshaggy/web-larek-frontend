@@ -9,6 +9,7 @@ export class AppData {
         this._api = api;
     }
 
+    //Получаем массив товаров
     async getProducts(): Promise<IProduct[]> {
         if (this._products.length) {
             return this._products;
