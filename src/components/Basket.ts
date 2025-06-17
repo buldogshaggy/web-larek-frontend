@@ -63,6 +63,14 @@ export class Basket {
         return this._basketItems;
     }
 
+    // Очищаем корзину
+    clear() {
+        this._basketItems = [];
+        this.refresh();
+        this.events.emit('basket:changed');
+        this.updateHeaderCounter(0);
+    }
+
     set items(items: HTMLElement[]) {
         this._list.replaceChildren(...items);
     }

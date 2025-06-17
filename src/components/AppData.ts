@@ -18,7 +18,8 @@ export class AppData {
         const response = await this._api.get('/product');
         this._products = (response as { items: IProduct[] }).items.map(item => ({
             ...item,
-            price: item.price ?? 0
+            price: item.price ?? 0,
+            image: item.image.replace('.svg', '.png')
         }));
         return this._products;
     }
