@@ -14,6 +14,7 @@ export class Basket {
         this._list = ensureElement<HTMLElement>('.basket__list', container);
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = ensureElement<HTMLButtonElement>('.basket__button', container);
+        this.toggleButton(this._basketItems.length > 0);
 
         this._button.addEventListener('click', () => {
             events.emit('order:open');

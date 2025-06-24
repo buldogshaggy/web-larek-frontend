@@ -29,10 +29,6 @@ const basketElement = cloneTemplate(basketTemplate);
 const basket = new Basket(basketElement, events);
 const headerBasket = ensureElement<HTMLElement>('.header__basket');
 
-//Инициализация заказа
-// const orderElement = cloneTemplate(orderTemplate);
-// const order = new Order(orderElement, events);
-
 //Загрузка товаров
 appData.getProducts()
     .then(products => {
@@ -144,26 +140,16 @@ events.on('order:open', () => {
     document.body.style.overflow = 'hidden';
     modalContent.innerHTML = '';
 
-    // 1. Клонируем шаблон
+    // Клонируем шаблон
     const orderElement = cloneTemplate(orderTemplate);
-    
-    // 2. Проверяем клонированный элемент
-    console.log('Клонированный шаблон:', orderElement.outerHTML);
-    
-    // 3. Ищем форму разными способами для надежности
-    const formElement = orderElement.querySelector('form[name="order"]') || 
-                       orderElement.querySelector('form.form') ||
-                       orderElement.querySelector('form');
-    
-    if (!formElement) {
-      console.error('Структура шаблона:', orderElement.outerHTML);
-      throw new Error('Форма не найдена в шаблоне');
-    }
 
-    // 4. Создаем Order
-    const order = new Order(formElement as HTMLFormElement, events);
+    // Создаем Order - передаем клонированный элемент
+    const order = new Order(orderElement as HTMLFormElement, events);
+    
+    // Добавляем элемент в modalContent
+    modalContent.appendChild(orderElement); // Используем appendChild вместо innerHTML
+    
     modalContainer.classList.add('modal_active');
-
   } catch (error) {
     console.error('Ошибка инициализации формы:', error);
     modalContainer.classList.remove('modal_active');
@@ -171,25 +157,75 @@ events.on('order:open', () => {
   }
 });
 
-// events.on('order:submit', () => {
-//     const orderData: IOrder = {
-//         items: basket.products.map(item => item.id),
-//         total: basket.products.reduce((sum, item) => sum + (item.price || 0), 0),
-//         email: '',
-//         phone: '',
-//         address: order.address,
-//         payment: order.payment
-//     };
+// Добавим после инициализации Order:
 
-//     appData.createOrder(orderData)
-//         .then(result => {
-//             events.emit('order:success', result);
-//             basket.clear();
-//         })
-//         .catch(err => {
-//             console.error('Ошибка оформления заказа:', err);
-//         });
-// });
+events.on('order:submit', (order: IOrder) => {
+    try {
+        //Добавляем товары из корзины в заказ
+        order.items = basket.products.map(item => item.id);
+        order.total = basket.products.reduce((sum, item) => sum + (item.price || 0), 0);
+
+        //Переходим к форме контактов
+        document.body.style.overflow = 'hidden';
+        modalContent.innerHTML = '';
+        
+        //Получаем и клонируем шаблон
+        const contactsTemplate = ensureElement<HTMLTemplateElement>('#contacts');
+        const contactsElement = cloneTemplate(contactsTemplate);
+        
+        //Добавляем в DOM
+        modalContent.appendChild(contactsElement);
+        modalContainer.classList.add('modal_active');
+
+        //Находим форму после добавления в DOM
+        const contactsForm = modalContent.querySelector('form[name="contacts"]');
+
+
+        // Обработчик отправки формы
+        contactsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(contactsForm as HTMLFormElement);
+            
+            const orderData: IOrder = {
+                ...order,
+                email: formData.get('email') as string,
+                phone: formData.get('phone') as string,
+                address: order.address,
+                payment: order.payment,
+                items: order.items,
+                total: order.total
+            };
+
+            appData.createOrder(orderData)
+                .then(result => {
+                    events.emit('order:success', result);
+                    basket.clear();
+                })
+                .catch(err => console.error('Ошибка оформления заказа:', err));
+        });
+
+        // Обработчики закрытия
+        const closeButton = ensureElement<HTMLButtonElement>('.modal__close', modalContainer);
+        closeButton.onclick = (e) => {
+            e.stopPropagation();
+            modalContainer.classList.remove('modal_active');
+            document.body.style.overflow = '';
+        };
+
+        modalContainer.addEventListener('click', (e) => {
+            if (e.target === modalContainer) {
+                e.stopPropagation();
+                modalContainer.classList.remove('modal_active');
+                document.body.style.overflow = '';
+            }
+        });
+
+    } catch (error) {
+        console.error('Ошибка при открытии формы контактов:', error);
+        // Показываем пользователю сообщение об ошибке
+        modalContent.innerHTML = '<p>Произошла ошибка при загрузке формы. Пожалуйста, попробуйте позже.</p>';
+    }
+});
 
 events.on('order:success', (result: IOrderResult) => {
     //Блокировка прокрутки страницы
