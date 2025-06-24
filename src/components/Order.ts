@@ -36,7 +36,7 @@ export class Order {
         this._elements.offlineButton.classList.add('button_alt');
 
         this._initEvents();
-        this._validateForm(); // Проверяем форму при инициализации
+        this._validateForm();
     }
 
     private _ensureElement<T extends HTMLElement>(selector: string): T {

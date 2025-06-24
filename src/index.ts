@@ -8,6 +8,7 @@ import { EventEmitter } from './components/base/events';
 import { API_URL } from './utils/constants';
 import { IProduct, IOrder, IOrderResult } from './types';
 import { ensureElement, cloneTemplate } from './utils/utils';
+import { Contacts } from './components/Contacts';
 
 const events = new EventEmitter();
 const api = new Api(API_URL);
@@ -147,7 +148,7 @@ events.on('order:open', () => {
     const order = new Order(orderElement as HTMLFormElement, events);
     
     // Добавляем элемент в modalContent
-    modalContent.appendChild(orderElement); // Используем appendChild вместо innerHTML
+    modalContent.appendChild(orderElement);
     
     modalContainer.classList.add('modal_active');
   } catch (error) {
@@ -161,56 +162,91 @@ events.on('order:open', () => {
 
 events.on('order:submit', (order: IOrder) => {
     try {
-        //Добавляем товары из корзины в заказ
+        // Добавляем товары из корзины в заказ
         order.items = basket.products.map(item => item.id);
         order.total = basket.products.reduce((sum, item) => sum + (item.price || 0), 0);
 
-        //Переходим к форме контактов
+        // Переходим к форме контактов
         document.body.style.overflow = 'hidden';
         modalContent.innerHTML = '';
         
-        //Получаем и клонируем шаблон
+        // Получаем и клонируем шаблон
         const contactsTemplate = ensureElement<HTMLTemplateElement>('#contacts');
         const contactsElement = cloneTemplate(contactsTemplate);
         
-        //Добавляем в DOM
+        // Создаем экземпляр Contacts
+        const contacts = new Contacts(contactsElement, events);
+        
+        // Добавляем в DOM
         modalContent.appendChild(contactsElement);
         modalContainer.classList.add('modal_active');
 
-        //Находим форму после добавления в DOM
-        const contactsForm = modalContent.querySelector('form[name="contacts"]');
-
-
         // Обработчик отправки формы
-        contactsForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const formData = new FormData(contactsForm as HTMLFormElement);
-            
-            const orderData: IOrder = {
-                ...order,
-                email: formData.get('email') as string,
-                phone: formData.get('phone') as string,
-                address: order.address,
-                payment: order.payment,
-                items: order.items,
-                total: order.total
-            };
+        // Обновлённый обработчик contacts:submit
+events.on('contacts:submit', (data: { email: string; phone: string }) => {
+    const orderData: IOrder = {
+        ...order,
+        email: data.email,
+        phone: data.phone,
+        address: order.address,
+        payment: order.payment,
+        items: basket.products.map(item => item.id),
+        total: basket.products.reduce((sum, item) => sum + (item.price || 0), 0)
+    };
 
-            appData.createOrder(orderData)
-                .then(result => {
-                    events.emit('order:success', result);
-                    basket.clear();
-                })
-                .catch(err => console.error('Ошибка оформления заказа:', err));
+    console.log('Отправка заказа:', orderData); // Лог для отладки
+
+    appData.createOrder(orderData)
+        .then(result => {
+            console.log('Ответ сервера:', result); // Лог для отладки
+            if (result) {
+                // 1. Сначала готовим success-окно
+                const successTemplate = ensureElement<HTMLTemplateElement>('#success');
+                const successElement = cloneTemplate(successTemplate);
+                
+                // Заполняем данными
+                const description = successElement.querySelector('.order-success__description');
+                if (description) {
+                    description.textContent = `Списано ${result.total} синапсов`;
+                }
+
+                // 2. Затем закрываем текущее окно
+                modalContainer.classList.remove('modal_active');
+                
+                // 3. И открываем success-окно
+                modalContent.innerHTML = '';
+                modalContent.appendChild(successElement);
+                modalContainer.classList.add('modal_active');
+                document.body.style.overflow = 'hidden';
+
+                // Обработчики для нового окна
+                const closeButton = successElement.querySelector('.order-success__close');
+                if (closeButton) {
+                    closeButton.addEventListener('click', () => {
+                        modalContainer.classList.remove('modal_active');
+                        document.body.style.overflow = '';
+                    });
+                }
+
+                modalContainer.addEventListener('click', (e) => {
+                    if (e.target === modalContainer) {
+                        modalContainer.classList.remove('modal_active');
+                        document.body.style.overflow = '';
+                    }
+                }, { once: true });
+
+                // Очищаем корзину
+                basket.clear();
+            }
+        })
+        .catch(err => {
+            console.error('Ошибка оформления заказа:', err);
+            const errorsElement = modalContent.querySelector('.form__errors');
+            if (errorsElement) {
+                errorsElement.innerHTML = '<span class="form__error">Произошла ошибка при оформлении заказа. Пожалуйста, попробуйте еще раз.</span>';
+            }
         });
-
-        // Обработчики закрытия
-        const closeButton = ensureElement<HTMLButtonElement>('.modal__close', modalContainer);
-        closeButton.onclick = (e) => {
-            e.stopPropagation();
-            modalContainer.classList.remove('modal_active');
-            document.body.style.overflow = '';
-        };
+});
 
         modalContainer.addEventListener('click', (e) => {
             if (e.target === modalContainer) {
@@ -222,39 +258,48 @@ events.on('order:submit', (order: IOrder) => {
 
     } catch (error) {
         console.error('Ошибка при открытии формы контактов:', error);
-        // Показываем пользователю сообщение об ошибке
         modalContent.innerHTML = '<p>Произошла ошибка при загрузке формы. Пожалуйста, попробуйте позже.</p>';
     }
 });
 
 events.on('order:success', (result: IOrderResult) => {
-    //Блокировка прокрутки страницы
-    document.body.style.overflow = 'hidden';
-    
-    //Очищаем и заполняем модальное окно сообщением об успехе
-    modalContent.innerHTML = '';
-    const successTemplate = ensureElement<HTMLTemplateElement>('#success');
-    const successElement = cloneTemplate(successTemplate);
-    successElement.querySelector('.order-success__description')!.textContent = 
-        `Списано ${result.total} синапсов`;
-    
-    modalContent.appendChild(successElement);
-    modalContainer.classList.add('modal_active');
-
-    // Обработчик закрытия
-    const closeButton = ensureElement<HTMLButtonElement>('.order-success__close', successElement);
-    closeButton.onclick = (e) => {
-        e.stopPropagation();
+    try {
+        // Сначала закрываем текущее модальное окно (форму контактов)
         modalContainer.classList.remove('modal_active');
-        document.body.style.overflow = '';
-    };
+        
+        // Затем открываем новое модальное окно с успешным заказом
+        document.body.style.overflow = 'hidden';
+        modalContent.innerHTML = '';
 
-    // Обработчик закрытия при клике на оверлей
-    modalContainer.addEventListener('click', (e) => {
-        if (e.target === modalContainer) {
-            e.stopPropagation();
-            modalContainer.classList.remove('modal_active');
-            document.body.style.overflow = '';
+        const successTemplate = ensureElement<HTMLTemplateElement>('#success');
+        console.log(successTemplate);
+        const successElement = cloneTemplate(successTemplate);
+
+        const description = successElement.querySelector('.order-success__description');
+        if (description) {
+            description.textContent = `Списано ${result.total} синапсов`;
         }
-    });
+
+        modalContent.appendChild(successElement);
+        modalContainer.classList.add('modal_active');
+
+        const closeButton = successElement.querySelector('.order-success__close');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                modalContainer.classList.remove('modal_active');
+                document.body.style.overflow = '';
+            });
+        }
+
+        modalContainer.addEventListener('click', (e) => {
+            if (e.target === modalContainer) {
+                modalContainer.classList.remove('modal_active');
+                document.body.style.overflow = '';
+            }
+        });
+
+    } catch (error) {
+        console.error('Ошибка при отображении успешного заказа:', error);
+        modalContent.innerHTML = '<p>Произошла ошибка при отображении информации о заказе.</p>';
+    }
 });
