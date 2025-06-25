@@ -32,3 +32,30 @@ src/
 ## Presenter:
 **EventEmitter** - централизованный обработчик событий
 Главный файл **index.ts** связывает все компоненты через события
+
+# Типы данных (types.ts)
+Основные интерфейсы данных:
+```
+interface IProduct {
+    id: string;
+    description: string;
+    image: string;
+    title: string;
+    category: ProductCategory;
+    price: number | null;
+}
+
+interface IOrder {
+    email: string;
+    phone: string;
+    address: string;
+    payment: string;
+    items: string[];
+    total: number;
+}
+
+interface IOrderResult {
+    id: string;
+    total: number;
+}
+```
