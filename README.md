@@ -98,3 +98,14 @@ interface IOrderResult {
 ```_validateForm()``` - валидация формы  
 ```_validateEmail()``` - валидация email  
 ```_validatePhone()``` - валидация телефона  
+
+# Запуск проекта
+Установите зависимости:  
+
+```npm install```  
+Запустите проект:  
+
+```npm start```
+Откройте в браузере:  
+
+```http://localhost:3000```
