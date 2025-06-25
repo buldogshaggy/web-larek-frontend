@@ -101,11 +101,8 @@ interface IOrderResult {
 
 # Запуск проекта
 Установите зависимости:  
-
 ```npm install```  
 Запустите проект:  
-
-```npm start```
+```npm start```  
 Откройте в браузере:  
-
 ```http://localhost:3000```
