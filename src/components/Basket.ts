@@ -21,7 +21,7 @@ export class Basket {
         });
     }
 
-    // Добавляем товар в корзину
+    //Добавляем товар в корзину
     addItem(item: IProduct) {
         this._basketItems.push(item);
         this.refresh();
@@ -29,7 +29,7 @@ export class Basket {
         this.updateHeaderCounter(this._basketItems.length);
     }
 
-    // Обновляем отображение корзины
+    //Обновляем отображение корзины
     protected refresh() {
         this._list.innerHTML = '';
         this._basketItems.forEach((item, index) => {
@@ -46,7 +46,7 @@ export class Basket {
         this.total = this._basketItems.reduce((sum, item) => sum + (item.price || 0), 0);
     }
 
-    // Удаляем товар из корзины
+    //Удаляем товар из корзины
     removeItem(id: string) {
         this._basketItems = this._basketItems.filter(item => item.id !== id);
         this.refresh();
@@ -54,17 +54,17 @@ export class Basket {
         this.updateHeaderCounter(this._basketItems.length);
     }
 
-    // Геттер для элементов DOM корзины
+    //Геттер для элементов DOM корзины
     get items(): HTMLElement[] {
         return Array.from(this._list.children) as HTMLElement[];
     }
 
-    // Геттер для товаров в корзине
+    //Геттер для товаров в корзине
     get products(): IProduct[] {
         return this._basketItems;
     }
 
-    // Очищаем корзину
+    //Очищаем корзину
     clear() {
         this._basketItems = [];
         this.refresh();

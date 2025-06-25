@@ -83,9 +83,6 @@ export class Order {
         this._elements.onlineButton.classList.remove('button_alt-active');
         this._elements.offlineButton.classList.remove('button_alt-active');
 
-        // this._elements.onlineButton.classList.toggle('button_alt-active', method === 'online');
-        // this._elements.offlineButton.classList.toggle('button_alt-active', method === 'offline');
-
         if (method === 'online') {
             this._elements.onlineButton.classList.add('button_alt-active');
         } else if (method === 'offline') {
