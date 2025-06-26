@@ -1,4 +1,3 @@
-// Contacts.ts
 import { ensureElement } from '../utils/utils';
 import { EventEmitter } from './base/events';
 
@@ -12,16 +11,16 @@ interface IContactsElements {
 
 export class Contacts {
     private _elements: IContactsElements;
+    private _container: HTMLElement;
     private _email: string = '';
     private _phone: string = '';
     private _valid: boolean = false;
 
     constructor(
-        protected container: HTMLElement,
+        container: HTMLElement,
         protected events: EventEmitter
     ) {
-        if (!container) throw new Error('Contacts container is required');
-        
+        this._container = container;
         this._elements = {
             form: container as HTMLFormElement,
             emailInput: this._ensureElement<HTMLInputElement>('input[name="email"]'),
@@ -31,13 +30,11 @@ export class Contacts {
         };
 
         this._initEvents();
-        this._validateForm();
     }
 
     private _ensureElement<T extends HTMLElement>(selector: string): T {
-        const element = this.container.querySelector(selector);
+        const element = this._container.querySelector(selector);
         if (!element) {
-            console.error(`Element ${selector} not found. Container content:`, this.container.innerHTML);
             throw new Error(`Element ${selector} not found in contacts form`);
         }
         return element as T;
@@ -48,7 +45,7 @@ export class Contacts {
             this._email = this._elements.emailInput.value;
             this._validateForm();
         });
-        
+
         this._elements.phoneInput.addEventListener('input', () => {
             this._phone = this._elements.phoneInput.value;
             this._validateForm();
@@ -56,7 +53,7 @@ export class Contacts {
 
         this._elements.form.addEventListener('submit', (e) => {
             e.preventDefault();
-            if (this._validateForm()) {
+            if (this._valid) {
                 this.events.emit('contacts:submit', {
                     email: this._email,
                     phone: this._phone
@@ -68,28 +65,22 @@ export class Contacts {
     private _validateForm(): boolean {
         const errors: string[] = [];
         
-        if (!this._email.trim()) {
-            errors.push('Укажите email');
-        } else if (!this._validateEmail(this._email)) {
+        // Проверка email
+        if (!this._validateEmail(this._email)) {
             errors.push('Укажите корректный email');
         }
         
-        if (!this._phone.trim()) {
-            errors.push('Укажите телефон');
-        } else if (!this._validatePhone(this._phone)) {
-            errors.push('Укажите корректный телефон');
+        // Проверка телефона (минимум 10 цифр)
+        if (!this._validatePhone(this._phone)) {
+            errors.push('Укажите корректный телефон (минимум 10 цифр)');
         }
 
         this._valid = errors.length === 0;
         this._elements.submitButton.disabled = !this._valid;
         
-        if (errors.length > 0) {
-            this._elements.errors.innerHTML = errors.map(error => 
-                `<span class="form__error">${error}</span>`
-            ).join('<br>');
-        } else {
-            this._elements.errors.innerHTML = '';
-        }
+        this._elements.errors.innerHTML = errors.length > 0 
+            ? errors.map(error => `<span class="form__error">${error}</span>`).join('<br>')
+            : '';
 
         return this._valid;
     }
@@ -100,19 +91,12 @@ export class Contacts {
     }
 
     private _validatePhone(phone: string): boolean {
-        const re = /^\+?[\d\s\-\(\)]+$/;
-        return re.test(phone);
+        // Удаляем все нецифровые символы и проверяем длину
+        const digits = phone.replace(/\D/g, '');
+        return digits.length >= 10;
     }
 
-    get email(): string {
-        return this._email;
-    }
-
-    get phone(): string {
-        return this._phone;
-    }
-
-    get valid(): boolean {
-        return this._valid;
+    render(): HTMLElement {
+        return this._container;
     }
 }

@@ -1,93 +1,47 @@
 import { ensureElement } from '../utils/utils';
 import { EventEmitter } from './base/events';
 import { IProduct } from '../types';
+import { BasketItem } from './BasketItem';
 
 export class Basket {
     protected _list: HTMLElement;
     protected _total: HTMLElement;
     protected _button: HTMLButtonElement;
-    protected _basketItems: IProduct[] = [];
+    protected _itemTemplate: HTMLTemplateElement;
 
-    constructor(protected container: HTMLElement, protected events: EventEmitter) {
-        if (!container) throw new Error('Basket container not found');
-        
+    constructor(
+        protected container: HTMLElement,
+        protected events: EventEmitter,
+        itemTemplate: HTMLTemplateElement
+    ) {
+        this._itemTemplate = itemTemplate;
         this._list = ensureElement<HTMLElement>('.basket__list', container);
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = ensureElement<HTMLButtonElement>('.basket__button', container);
-        this.toggleButton(this._basketItems.length > 0);
 
         this._button.addEventListener('click', () => {
             events.emit('order:open');
         });
     }
 
-    //Добавляем товар в корзину
-    addItem(item: IProduct) {
-        this._basketItems.push(item);
-        this.refresh();
-        this.events.emit('basket:changed');
-        this.updateHeaderCounter(this._basketItems.length);
+    public getContainer(): HTMLElement {
+        return this.container;
     }
 
-    //Обновляем отображение корзины
-    protected refresh() {
+    render(items: IProduct[]): void {
         this._list.innerHTML = '';
-        this._basketItems.forEach((item, index) => {
-            const itemElement = document.createElement('li');
-            itemElement.className = 'basket__item card card_compact';
-            itemElement.innerHTML = `
-                    <span class="basket__item-index">${index + 1}</span>
-                    <span class="card__title">${item.title}</span>
-                    <span class="card__price">${item.price.toLocaleString('ru-RU')} синапсов</span>
-                    <button class="basket__item-delete" data-id="${item.id}" aria-label="Удалить"></button>`;
-            this._list.appendChild(itemElement);
+        items.forEach((item, index) => {
+            const basketItem = new BasketItem(this._itemTemplate, item, index);
+            basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
+                this.events.emit('basket:remove', { id: item.id });
+            });
+            this._list.appendChild(basketItem.container);
         });
-
-        this.total = this._basketItems.reduce((sum, item) => sum + (item.price || 0), 0);
+        this._total.textContent = `${this.calculateTotal(items)} синапсов`;
+        this._button.disabled = items.length === 0;
     }
 
-    //Удаляем товар из корзины
-    removeItem(id: string) {
-        this._basketItems = this._basketItems.filter(item => item.id !== id);
-        this.refresh();
-        this.events.emit('basket:changed');
-        this.updateHeaderCounter(this._basketItems.length);
+    private calculateTotal(items: IProduct[]): number {
+        return items.reduce((sum, item) => sum + (item.price || 0), 0);
     }
-
-    //Геттер для элементов DOM корзины
-    get items(): HTMLElement[] {
-        return Array.from(this._list.children) as HTMLElement[];
-    }
-
-    //Геттер для товаров в корзине
-    get products(): IProduct[] {
-        return this._basketItems;
-    }
-
-    //Очищаем корзину
-    clear() {
-        this._basketItems = [];
-        this.refresh();
-        this.events.emit('basket:changed');
-        this.updateHeaderCounter(0);
-    }
-
-    set items(items: HTMLElement[]) {
-        this._list.replaceChildren(...items);
-    }
-
-    set total(total: number) {
-        this._total.textContent = `${total} синапсов`;
-    }
-
-    toggleButton(state: boolean) {
-        this._button.disabled = !state;
-    }
-
-    updateHeaderCounter(count: number) {
-    const counter = document.querySelector('.header__basket-counter');
-    if (counter) {
-        counter.textContent = count.toString();
-    }
-}
 }

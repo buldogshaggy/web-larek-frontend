@@ -16,11 +16,13 @@ export class Order {
     private _payment: string = '';
     private _address: string = '';
     private _valid: boolean = false;
+    public container: HTMLElement;
 
     constructor(
-        protected container: HTMLElement,
+        container: HTMLElement,
         protected events: EventEmitter
     ) {
+        this.container = container;
         if (!container) throw new Error('Order container is required');
         
         this._elements = {
@@ -32,9 +34,6 @@ export class Order {
             errors: this._ensureElement<HTMLElement>('.form__errors')
         };
 
-        this._elements.onlineButton.classList.add('button_alt');
-        this._elements.offlineButton.classList.add('button_alt');
-
         this._initEvents();
         this._validateForm();
     }
@@ -42,7 +41,6 @@ export class Order {
     private _ensureElement<T extends HTMLElement>(selector: string): T {
         const element = this.container.querySelector(selector);
         if (!element) {
-            console.error(`Element ${selector} not found. Container content:`, this.container.innerHTML);
             throw new Error(`Element ${selector} not found in order form`);
         }
         return element as T;
@@ -51,12 +49,10 @@ export class Order {
     private _initEvents(): void {
         this._elements.onlineButton.addEventListener('click', () => {
             this._setPayment('online');
-            this._validateForm();
         });
         
         this._elements.offlineButton.addEventListener('click', () => {
             this._setPayment('offline');
-            this._validateForm();
         });
         
         this._elements.addressInput.addEventListener('input', () => {
@@ -66,28 +62,20 @@ export class Order {
 
         this._elements.form.addEventListener('submit', (e) => {
             e.preventDefault();
-            if (this._validateForm()) {
+            if (this._valid) {
                 this.events.emit('order:submit', {
                     payment: this._payment,
-                    address: this._address,
-                    items: [],
-                    total: 0
-                } as IOrder);
+                    address: this._address
+                });
             }
         });
     }
 
     private _setPayment(method: string): void {
         this._payment = method;
-
-        this._elements.onlineButton.classList.remove('button_alt-active');
-        this._elements.offlineButton.classList.remove('button_alt-active');
-
-        if (method === 'online') {
-            this._elements.onlineButton.classList.add('button_alt-active');
-        } else if (method === 'offline') {
-            this._elements.offlineButton.classList.add('button_alt-active');
-        }
+        this._elements.onlineButton.classList.toggle('button_alt-active', method === 'online');
+        this._elements.offlineButton.classList.toggle('button_alt-active', method === 'offline');
+        this._validateForm();
     }
 
     private _validateForm(): boolean {
@@ -104,33 +92,15 @@ export class Order {
         this._valid = errors.length === 0;
         this._elements.submitButton.disabled = !this._valid;
         
-        // Отображаем ошибки или скрываем блок, если ошибок нет
-        if (errors.length > 0) {
-            this._elements.errors.innerHTML = errors.map(error => 
-                `<span class="form__error">${error}</span>`
-            ).join('<br>');
-        } else {
-            this._elements.errors.innerHTML = '';
-        }
+        this._elements.errors.innerHTML = errors.length > 0 
+            ? errors.map(error => `<span class="form__error">${error}</span>`).join('<br>')
+            : '';
 
         return this._valid;
     }
 
-    get payment(): string {
-        return this._payment;
-    }
-
-    get address(): string {
-        return this._address;
-    }
-
-    get valid(): boolean {
-        return this._valid;
-    }
-
-    setAddress(value: string): void {
-        this._elements.addressInput.value = value;
-        this._address = value;
-        this._validateForm();
+    // Добавляем метод render
+    render(): HTMLElement {
+        return this.container;
     }
 }
