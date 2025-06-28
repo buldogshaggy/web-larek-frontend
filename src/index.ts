@@ -34,8 +34,7 @@ const templates = {
 // Компоненты
 const basket = new Basket(
     cloneTemplate(templates.basket),
-    events,
-    templates.basketItem
+    events
 );
 
 const basketButton = ensureElement<HTMLButtonElement>('.header__basket');
@@ -89,25 +88,54 @@ events.on('card:add', (item: IProduct) => {
         return;
     }
     appData.addToBasket(item);
-    events.emit('basket:update', appData.basket);
+    events.emit('basket:change');
 
     const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
     basketCounter.textContent = String(appData.basket.length);
 });
 
-events.on('basket:open', (items: IProduct[]) => {
-    basket.render(items);
+events.on('basket:open', () => {
+    // Создаем элементы корзины
+    const basketItems = appData.basket.map((item, index) => {
+        const basketItem = new BasketItem(templates.basketItem, item, index);
+        basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
+            events.emit('basket:remove', { id: item.id });
+        });
+        return basketItem.container;
+    });
+
+    // Обновляем корзину
+    basket.setItems(basketItems);
+    basket.setTotal(appData.getTotalPrice());
+    basket.setButtonState(appData.basket.length === 0);
+
     modal.content = basket.getContainer();
     modal.open();
 });
 
-events.on('basket:update', (items: IProduct[]) => {
-    basket.render(items);
+events.on('basket:change', () => {
+    // Создаем элементы корзины
+    const basketItems = appData.basket.map((item, index) => {
+        const basketItem = new BasketItem(templates.basketItem, item, index);
+        basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
+            events.emit('basket:remove', { id: item.id });
+        });
+        return basketItem.container;
+    });
+
+    // Обновляем корзину
+    basket.setItems(basketItems);
+    basket.setTotal(appData.getTotalPrice());
+    basket.setButtonState(appData.basket.length === 0);
+
+    // Обновляем счетчик в шапке
+    const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
+    basketCounter.textContent = String(appData.basket.length);
 });
 
 events.on('basket:remove', (data: { id: string }) => {
     appData.removeFromBasket(data.id);
-    events.emit('basket:update', appData.basket);
+    events.emit('basket:change');
     
     const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
     basketCounter.textContent = String(appData.basket.length);
@@ -129,7 +157,7 @@ events.on('order:submit', (order: Partial<IOrder>) => {
 events.on('order:success', () => {
     modal.close();
     appData.clearBasket();
-    events.emit('basket:update', appData.basket);
+    events.emit('basket:change');
     
     //Обновляем счетчик в хедере
     const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
@@ -165,7 +193,7 @@ events.on('contacts:submit', (data: { email: string; phone: string }) => {
             
             //Очищаем корзину после успешного заказа
             appData.clearBasket();
-            events.emit('basket:update', appData.basket);
+            events.emit('basket:change');
             
             //Обновляем счетчик в хедере
             const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');

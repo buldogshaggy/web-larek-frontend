@@ -7,14 +7,11 @@ export class Basket {
     protected _list: HTMLElement;
     protected _total: HTMLElement;
     protected _button: HTMLButtonElement;
-    protected _itemTemplate: HTMLTemplateElement;
 
     constructor(
         protected container: HTMLElement,
-        protected events: EventEmitter,
-        itemTemplate: HTMLTemplateElement
+        protected events: EventEmitter
     ) {
-        this._itemTemplate = itemTemplate;
         this._list = ensureElement<HTMLElement>('.basket__list', container);
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = ensureElement<HTMLButtonElement>('.basket__button', container);
@@ -28,20 +25,15 @@ export class Basket {
         return this.container;
     }
 
-    render(items: IProduct[]): void {
-        this._list.innerHTML = '';
-        items.forEach((item, index) => {
-            const basketItem = new BasketItem(this._itemTemplate, item, index);
-            basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
-                this.events.emit('basket:remove', { id: item.id });
-            });
-            this._list.appendChild(basketItem.container);
-        });
-        this._total.textContent = `${this.calculateTotal(items)} синапсов`;
-        this._button.disabled = items.length === 0;
+    setItems(items: HTMLElement[]): void {
+        this._list.replaceChildren(...items);
     }
 
-    private calculateTotal(items: IProduct[]): number {
-        return items.reduce((sum, item) => sum + (item.price || 0), 0);
+    setTotal(total: number): void {
+        this._total.textContent = `${total} синапсов`;
+    }
+
+    setButtonState(disabled: boolean): void {
+        this._button.disabled = disabled;
     }
 }
