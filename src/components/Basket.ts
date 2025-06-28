@@ -7,6 +7,8 @@ export class Basket {
     protected _list: HTMLElement;
     protected _total: HTMLElement;
     protected _button: HTMLButtonElement;
+    protected _basketButton: HTMLButtonElement;
+    protected _counter: HTMLElement;
 
     constructor(
         protected container: HTMLElement,
@@ -15,9 +17,17 @@ export class Basket {
         this._list = ensureElement<HTMLElement>('.basket__list', container);
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = ensureElement<HTMLButtonElement>('.basket__button', container);
+        
+        //Инициализируем кнопку корзины и счетчик
+        this._basketButton = ensureElement<HTMLButtonElement>('.header__basket');
+        this._counter = ensureElement<HTMLElement>('.header__basket-counter');
 
         this._button.addEventListener('click', () => {
             events.emit('order:open');
+        });
+
+        this._basketButton.addEventListener('click', () => {
+            events.emit('basket:open');
         });
     }
 
@@ -35,5 +45,9 @@ export class Basket {
 
     setButtonState(disabled: boolean): void {
         this._button.disabled = disabled;
+    }
+
+    setCounter(value: number): void {
+        this._counter.textContent = String(value);
     }
 }

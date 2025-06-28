@@ -67,6 +67,7 @@ export class AppData {
             price: item.price ?? 0,
             image: item.image.replace('.svg', '.png')
         }));
+        this.events.emit('items:changed', this._products);
     }
 
     get basket(): IProduct[] {

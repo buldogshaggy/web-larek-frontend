@@ -11,6 +11,7 @@ import { IProduct, IOrder } from './types';
 import { ensureElement, cloneTemplate } from './utils/utils';
 import { Contacts } from './components/Contacts';
 import { BasketItem } from './components/BasketItem';
+import { Success } from './components/Success';
 
 const events = new EventEmitter();
 const api = new Api(API_URL);
@@ -31,21 +32,16 @@ const templates = {
     success: ensureElement<HTMLTemplateElement>('#success')
 };
 
-// Компоненты
+//Компоненты
 const basket = new Basket(cloneTemplate(templates.basket), events);
 const order = new Order(cloneTemplate(templates.order), events);
 const contacts = new Contacts(cloneTemplate(templates.contacts), events);
+const success = new Success(cloneTemplate(templates.success), events);
 
-const basketButton = ensureElement<HTMLButtonElement>('.header__basket');
-basketButton.addEventListener('click', () => {
-    events.emit('basket:open', appData.basket);
-});
-
-// Загрузка товаров
+//Загрузка товаров
 api.get('/product')
     .then((data: { items: IProduct[] }) => {
         appData.products = data.items;
-        renderCatalog(appData.products);
     })
     .catch(console.error);
 
@@ -61,7 +57,19 @@ function renderCatalog(products: IProduct[]) {
     });
 }
 
-// Обработчики событий
+//Обработчики событий
+events.on('items:changed', (items: IProduct[]) => {
+    const galleryContainer = ensureElement<HTMLElement>('.gallery');
+    galleryContainer.innerHTML = '';
+    
+    items.forEach(item => {
+        const card = new Card(templates.cardCatalog, item, (product) => {
+            events.emit('card:open', product);
+        });
+        galleryContainer.appendChild(card.render());
+    });
+});
+
 events.on('card:open', (item: IProduct) => {
     const isInBasket = appData.basket.some(product => product.id === item.id);
     const previewCard = new Card(templates.cardPreview, item, () => {
@@ -88,9 +96,6 @@ events.on('card:add', (item: IProduct) => {
     }
     appData.addToBasket(item);
     events.emit('basket:change');
-
-    const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
-    basketCounter.textContent = String(appData.basket.length);
 });
 
 events.on('basket:open', () => {
@@ -126,18 +131,12 @@ events.on('basket:change', () => {
     basket.setItems(basketItems);
     basket.setTotal(appData.getTotalPrice());
     basket.setButtonState(appData.basket.length === 0);
-
-    // Обновляем счетчик в шапке
-    const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
-    basketCounter.textContent = String(appData.basket.length);
+    basket.setCounter(appData.basket.length);
 });
 
 events.on('basket:remove', (data: { id: string }) => {
     appData.removeFromBasket(data.id);
     events.emit('basket:change');
-    
-    const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
-    basketCounter.textContent = String(appData.basket.length);
 });
 
 events.on('order:open', () => {
@@ -165,10 +164,6 @@ events.on('order:success', () => {
     modal.close();
     appData.clearBasket();
     events.emit('basket:change');
-    
-    //Обновляем счетчик в хедере
-    const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
-    basketCounter.textContent = '0';
 });
 
 events.on('contacts:submit', (data: { email: string; phone: string }) => {
@@ -182,29 +177,10 @@ events.on('contacts:submit', (data: { email: string; phone: string }) => {
 
     api.post('/order', orderData)
         .then((result: { id: string, total: number }) => {
-            const successElement = cloneTemplate(templates.success);
-            const description = successElement.querySelector('.order-success__description');
-            if (description) {
-                description.textContent = `Списано ${result.total} синапсов`;
-            }
-            
-            //Обработчик кнопки "За новыми покупками!"
-            const closeButton = successElement.querySelector('.order-success__close');
-            if (closeButton) {
-                closeButton.addEventListener('click', () => {
-                    modal.close();
-                });
-            }
-            
-            modal.content = successElement;
-            
-            //Очищаем корзину после успешного заказа
-            appData.clearBasket();
-            events.emit('basket:change');
-            
-            //Обновляем счетчик в хедере
-            const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
-            basketCounter.textContent = '0';
+            success.total = result.total;
+            events.emit('order:success');
+            modal.content = success.render();
+            modal.open();
         })
         .catch(console.error);
 });
