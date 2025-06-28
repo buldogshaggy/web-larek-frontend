@@ -13,9 +13,6 @@ interface IOrderElements {
 
 export class Order {
     private _elements: IOrderElements;
-    private _payment: string = '';
-    private _address: string = '';
-    private _valid: boolean = false;
     public container: HTMLElement;
 
     constructor(
@@ -35,7 +32,6 @@ export class Order {
         };
 
         this._initEvents();
-        this._validateForm();
     }
 
     private _ensureElement<T extends HTMLElement>(selector: string): T {
@@ -48,58 +44,45 @@ export class Order {
 
     private _initEvents(): void {
         this._elements.onlineButton.addEventListener('click', () => {
-            this._setPayment('online');
+            this.events.emit('order.payment:change', { value: 'online' });
         });
         
         this._elements.offlineButton.addEventListener('click', () => {
-            this._setPayment('offline');
+            this.events.emit('order.payment:change', { value: 'offline' });
         });
-        
+
         this._elements.addressInput.addEventListener('input', () => {
-            this._address = this._elements.addressInput.value;
-            this._validateForm();
+            this.events.emit('order.address:change', { 
+                value: this._elements.addressInput.value 
+            });
         });
 
         this._elements.form.addEventListener('submit', (e) => {
             e.preventDefault();
-            if (this._valid) {
-                this.events.emit('order:submit', {
-                    payment: this._payment,
-                    address: this._address
-                });
-            }
+            this.events.emit('order:submit');
         });
     }
 
-    private _setPayment(method: string): void {
-        this._payment = method;
-        this._elements.onlineButton.classList.toggle('button_alt-active', method === 'online');
-        this._elements.offlineButton.classList.toggle('button_alt-active', method === 'offline');
-        this._validateForm();
+    setPaymentMethod(value: string): void {
+        this._elements.onlineButton.classList.toggle('button_alt-active', value === 'online');
+        this._elements.offlineButton.classList.toggle('button_alt-active', value === 'offline');
     }
 
-    private _validateForm(): boolean {
-        const errors: string[] = [];
-        
-        if (!this._payment) {
-            errors.push('Выберите способ оплаты');
-        }
-        
-        if (!this._address.trim()) {
-            errors.push('Укажите адрес доставки');
-        }
+    setAddress(value: string): void {
+        this._elements.addressInput.value = value;
+    }
 
-        this._valid = errors.length === 0;
-        this._elements.submitButton.disabled = !this._valid;
-        
-        this._elements.errors.innerHTML = errors.length > 0 
-            ? errors.map(error => `<span class="form__error">${error}</span>`).join('<br>')
+    setErrors(errors: Partial<Record<keyof IOrder, string>>): void {
+        const errorMessages = Object.values(errors).filter(Boolean);
+        this._elements.errors.innerHTML = errorMessages.length > 0 
+            ? errorMessages.map(error => `<span class="form__error">${error}</span>`).join('<br>')
             : '';
-
-        return this._valid;
     }
 
-    // Добавляем метод render
+    setValid(state: boolean): void {
+        this._elements.submitButton.disabled = !state;
+    }
+
     render(): HTMLElement {
         return this.container;
     }

@@ -1,10 +1,48 @@
 import { IProduct, IOrder, IOrderResult } from '../types';
+import { EventEmitter } from './base/events';
 
 export class AppData {
     private _products: IProduct[] = [];
     private _basket: IProduct[] = [];
     private _order: Partial<IOrder> = {};
+    private events: EventEmitter;
 
+    constructor(events: EventEmitter) {
+        this.events = events;
+        this._initEventHandlers();
+    }
+
+    private _initEventHandlers(): void {
+        this.events.on('order.payment:change', (data: { value: string }) => {
+            this.updateOrder({ payment: data.value });
+            this._validateOrder();
+        });
+
+        this.events.on('order.address:change', (data: { value: string }) => {
+            this.updateOrder({ address: data.value });
+            this._validateOrder();
+        });
+    }
+
+    private _validateOrder(): void {
+        const errors: Partial<Record<keyof IOrder, string>> = {};
+        
+        if (!this._order.payment) {
+            errors.payment = 'Выберите способ оплаты';
+        }
+        
+        if (!this._order.address?.trim()) {
+            errors.address = 'Укажите адрес доставки';
+        }
+
+        const isValid = Object.keys(errors).length === 0;
+        this.events.emit('order:validation', {
+            errors,
+            valid: isValid
+        });
+    }
+
+    // ... остальные методы остаются без изменений
     updateBasket(action: 'add' | 'remove' | 'clear', item?: IProduct): void {
         switch(action) {
             case 'add':
@@ -19,7 +57,6 @@ export class AppData {
         }
     }
 
-    // Получение списка товаров
     get products(): IProduct[] {
         return this._products;
     }
@@ -32,7 +69,6 @@ export class AppData {
         }));
     }
 
-    // Работа с корзиной
     get basket(): IProduct[] {
         return this._basket;
     }
@@ -49,7 +85,6 @@ export class AppData {
         this._basket = [];
     }
 
-    // Работа с заказом
     get order(): Partial<IOrder> {
         return this._order;
     }
@@ -58,16 +93,10 @@ export class AppData {
         this._order = { ...this._order, ...fields };
     }
 
-    // Валидация
-    validateOrder(): boolean {
-        return !!this._order.payment && !!this._order.address;
-    }
-
     validateContacts(): boolean {
         return !!this._order.email && !!this._order.phone;
     }
 
-    // Подсчет стоимости
     getTotalPrice(): number {
         return this._basket.reduce((sum, item) => sum + (item.price || 0), 0);
     }

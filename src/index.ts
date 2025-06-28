@@ -14,7 +14,7 @@ import { BasketItem } from './components/BasketItem';
 
 const events = new EventEmitter();
 const api = new Api(API_URL);
-const appData = new AppData();
+const appData = new AppData(events);
 
 // Инициализация модального окна
 const modalContainer = ensureElement<HTMLElement>('#modal-container');
@@ -32,10 +32,9 @@ const templates = {
 };
 
 // Компоненты
-const basket = new Basket(
-    cloneTemplate(templates.basket),
-    events
-);
+const basket = new Basket(cloneTemplate(templates.basket), events);
+const order = new Order(cloneTemplate(templates.order), events);
+const contacts = new Contacts(cloneTemplate(templates.contacts), events);
 
 const basketButton = ensureElement<HTMLButtonElement>('.header__basket');
 basketButton.addEventListener('click', () => {
@@ -142,7 +141,6 @@ events.on('basket:remove', (data: { id: string }) => {
 });
 
 events.on('order:open', () => {
-    const order = new Order(cloneTemplate(templates.order), events);
     modal.content = order.render();
     modal.open();
 });
@@ -152,6 +150,15 @@ events.on('order:submit', (order: Partial<IOrder>) => {
     const contacts = new Contacts(cloneTemplate(templates.contacts), events);
     modal.content = contacts.render();
     modal.open();
+});
+
+events.on('order:validation', (data: { errors: Record<string, string>, valid: boolean }) => {
+    order.setErrors(data.errors);
+    order.setValid(data.valid);
+});
+
+events.on('order.payment:change', (data: { value: string }) => {
+    order.setPaymentMethod(data.value);
 });
 
 events.on('order:success', () => {
