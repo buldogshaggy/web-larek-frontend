@@ -65,15 +65,29 @@ function renderCatalog(products: IProduct[]) {
 
 // Обработчики событий
 events.on('card:open', (item: IProduct) => {
+    const isInBasket = appData.basket.some(product => product.id === item.id);
     const previewCard = new Card(templates.cardPreview, item, () => {
-        events.emit('card:add', item);
+        if (isInBasket) {
+            events.emit('basket:remove', { id: item.id });
+        } else {
+            events.emit('card:add', item);
+        }
         modal.close();
     });
+
+    if (previewCard['_button']) {
+        previewCard['_button'].textContent = isInBasket ? 'Удалить из корзины' : 'В корзину';
+    }
+
     modal.content = previewCard.render();
     modal.open();
 });
 
 events.on('card:add', (item: IProduct) => {
+    if (item.price === null || item.price === 0) {
+        console.warn('Нельзя добавить товар без цены');
+        return;
+    }
     appData.addToBasket(item);
     events.emit('basket:update', appData.basket);
 
@@ -139,21 +153,23 @@ events.on('contacts:submit', (data: { email: string; phone: string }) => {
                 description.textContent = `Списано ${result.total} синапсов`;
             }
             
-            // Обработчик кнопки "За новыми покупками!"
+            //Обработчик кнопки "За новыми покупками!"
             const closeButton = successElement.querySelector('.order-success__close');
             if (closeButton) {
                 closeButton.addEventListener('click', () => {
                     modal.close();
-                    appData.clearBasket();
-                    events.emit('basket:update', appData.basket);
-                    
-                    // Обновляем счетчик в хедере
-                    const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
-                    basketCounter.textContent = '0';
                 });
             }
             
             modal.content = successElement;
+            
+            //Очищаем корзину после успешного заказа
+            appData.clearBasket();
+            events.emit('basket:update', appData.basket);
+            
+            //Обновляем счетчик в хедере
+            const basketCounter = ensureElement<HTMLElement>('.header__basket-counter');
+            basketCounter.textContent = '0';
         })
         .catch(console.error);
 });
