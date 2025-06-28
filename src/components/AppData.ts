@@ -42,7 +42,6 @@ export class AppData {
         });
     }
 
-    // ... остальные методы остаются без изменений
     updateBasket(action: 'add' | 'remove' | 'clear', item?: IProduct): void {
         switch(action) {
             case 'add':

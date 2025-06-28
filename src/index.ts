@@ -17,11 +17,11 @@ const events = new EventEmitter();
 const api = new Api(API_URL);
 const appData = new AppData(events);
 
-// Инициализация модального окна
+//Инициализация модального окна
 const modalContainer = ensureElement<HTMLElement>('#modal-container');
 const modal = new Modal(modalContainer);
 
-// Шаблоны
+//Шаблоны
 const templates = {
     cardCatalog: ensureElement<HTMLTemplateElement>('#card-catalog'),
     cardPreview: ensureElement<HTMLTemplateElement>('#card-preview'),
@@ -99,7 +99,7 @@ events.on('card:add', (item: IProduct) => {
 });
 
 events.on('basket:open', () => {
-    // Создаем элементы корзины
+    //Создаем элементы корзины
     const basketItems = appData.basket.map((item, index) => {
         const basketItem = new BasketItem(templates.basketItem, item, index);
         basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
@@ -108,7 +108,7 @@ events.on('basket:open', () => {
         return basketItem.container;
     });
 
-    // Обновляем корзину
+    //Обновляем корзину
     basket.setItems(basketItems);
     basket.setTotal(appData.getTotalPrice());
     basket.setButtonState(appData.basket.length === 0);
@@ -118,7 +118,7 @@ events.on('basket:open', () => {
 });
 
 events.on('basket:change', () => {
-    // Создаем элементы корзины
+    //Создаем элементы корзины
     const basketItems = appData.basket.map((item, index) => {
         const basketItem = new BasketItem(templates.basketItem, item, index);
         basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
@@ -127,7 +127,7 @@ events.on('basket:change', () => {
         return basketItem.container;
     });
 
-    // Обновляем корзину
+    //Обновляем корзину
     basket.setItems(basketItems);
     basket.setTotal(appData.getTotalPrice());
     basket.setButtonState(appData.basket.length === 0);

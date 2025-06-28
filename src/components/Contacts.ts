@@ -65,12 +65,12 @@ export class Contacts {
     private _validateForm(): boolean {
         const errors: string[] = [];
         
-        // Проверка email
+        //Проверка email
         if (!this._validateEmail(this._email)) {
             errors.push('Укажите корректный email');
         }
         
-        // Проверка телефона (минимум 10 цифр)
+        //Проверка телефона (минимум 10 цифр)
         if (!this._validatePhone(this._phone)) {
             errors.push('Укажите корректный телефон (минимум 10 цифр)');
         }
@@ -91,7 +91,6 @@ export class Contacts {
     }
 
     private _validatePhone(phone: string): boolean {
-        // Удаляем все нецифровые символы и проверяем длину
         const digits = phone.replace(/\D/g, '');
         return digits.length >= 10;
     }
