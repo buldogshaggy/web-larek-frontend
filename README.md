@@ -2,22 +2,26 @@
 WebLarek - это интернет-магазин цифровых товаров с функционалом корзины и оформления заказов. Проект реализован на TypeScript с использованием паттерна EventEmitter для управления событиями между компонентами.
 
 # Структура проекта
-src/  
-├── components/         - Основные компоненты приложения  
-│   ├── base/           - Базовые классы  
-│   │   ├── api.ts      - Класс для работы с API  
-│   │   └── events.ts   - Реализация EventEmitter  
-│   ├── AppData.ts      - Модель данных приложения  
-│   ├── Basket.ts       - Компонент корзины  
-│   ├── Card.ts         - Компонент карточки товара  
-│   ├── Contacts.ts     - Компонент формы контактов  
-│   └── Order.ts        - Компонент формы заказа  
-├── scss/               - Стили проекта  
-├── types.ts            - Типы данных  
-├── utils/              - Вспомогательные утилиты  
-│   ├── constants.ts    - Константы приложения  
-│   └── utils.ts        - Утилиты для работы с DOM  
-└── index.ts            - Точка входа в приложение   
+src/
+├── components/         - Основные компоненты приложения
+│   ├── base/           - Базовые классы
+│   │   ├── api.ts      - Класс для работы с API
+│   │   └── events.ts   - Реализация EventEmitter
+│   ├── AppData.ts      - Модель данных приложения
+│   ├── Basket.ts       - Компонент корзины
+│   ├── BasketItem.ts   - Элемент корзины
+│   ├── Card.ts         - Компонент карточки товара
+│   ├── Contacts.ts     - Компонент формы контактов
+│   ├── Modal.ts        - Модальное окно
+│   ├── Order.ts        - Компонент формы заказа
+│   ├── Page.ts         - Главная страница
+│   └── Success.ts      - Успешное оформление заказа
+├── scss/               - Стили проекта
+├── types.ts            - Типы данных
+├── utils/              - Вспомогательные утилиты
+│   ├── constants.ts    - Константы приложения
+│   └── utils.ts        - Утилиты для работы с DOM
+└── index.ts            - Точка входа в приложение  
 
 # Типы данных (types.ts)
 Основные интерфейсы данных:
@@ -58,9 +62,10 @@ interface IOrderResult {
 - `_order: Partial<IOrder>` - данные заказа
 
 **Методы:**
-- Работа с корзиной (`addToBasket`, `removeFromBasket`)
-- Валидация (`validateOrder`, `validateContacts`)
+- Работа с корзиной (`addToBasket`, `removeFromBasket`, `clearBasket`)
+- Валидация (`validateOrder`, `validateEmail`, `_validatePhone`)
 - Подсчет стоимости (`getTotalPrice`)
+- Обновление данных заказа (`updateOrder`)
 
 ### Basket
 **Назначение:** Логика работы корзины  
@@ -69,10 +74,12 @@ interface IOrderResult {
 - `_total: number` - общая стоимость
 
 **События:**
-- `basket:changed` - при изменении состава корзины
+- `basket:changed` - при изменении состава корзины  
+- `basket:open` - открытие корзины  
+- `basket:remove` - удаление товара из корзины  
 
 ## View (Представление)
-**Классы:** `Card`, `Order`, `Contacts`, `BasketItem`
+**Классы:** `Card`, `Order`, `Contacts`, `BasketItem`, `Modal`, `Success`
 
 ### Card
 **Назначение:** Отображение карточки товара  
@@ -88,7 +95,8 @@ interface IOrderResult {
 **Назначение:** Форма заказа (адрес и оплата)  
 **События:**
 - `order:submit` - отправка формы
-- `payment:changed` - смена способа оплаты
+- `order.payment:changed` - смена способа оплаты  
+- `order.address:change` - изменение адреса
 
 **Поля:**
 - `_addressInput: HTMLInputElement` - поле адреса
