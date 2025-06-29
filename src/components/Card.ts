@@ -45,6 +45,14 @@ export class Card {
             this._description.textContent = item.description;
         }
 
+        //Блокировка кнопки для товаров без цены
+        if (this._button) {
+            if (item.price === null || item.price === 0) {
+                this._button.disabled = true;
+                this._button.textContent = 'Недоступно';
+            }
+        }
+
         //Добавляем обработчик только на кнопку для preview-карточки
         if (this._container.classList.contains('card_full')) {
             this._container.style.cursor = 'default';

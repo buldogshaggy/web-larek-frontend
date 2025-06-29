@@ -22,6 +22,34 @@ export class AppData {
             this.updateOrder({ address: data.value });
             this._validateOrder();
         });
+        this.events.on('contacts:validation', (data: { email: string, phone: string }) => {
+            const errors: Record<string, string> = {};
+            
+            if (!this._validateEmail(data.email)) {
+                errors.email = 'Укажите корректный email';
+            }
+            
+            if (!this._validatePhone(data.phone)) {
+                errors.phone = 'Укажите корректный телефон (минимум 10 цифр)';
+            }
+
+            const isValid = Object.keys(errors).length === 0;
+            
+            this.events.emit('contacts:validated', {
+                errors,
+                valid: isValid
+            });
+        });
+    }
+
+    private _validateEmail(email: string): boolean {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    private _validatePhone(phone: string): boolean {
+        const digits = phone.replace(/\D/g, '');
+        return digits.length >= 10;
     }
 
     private _validateOrder(): void {

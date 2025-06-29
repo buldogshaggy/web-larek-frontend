@@ -18,7 +18,6 @@ export class Basket {
         this._total = ensureElement<HTMLElement>('.basket__price', container);
         this._button = ensureElement<HTMLButtonElement>('.basket__button', container);
         
-        //Инициализируем кнопку корзины и счетчик
         this._basketButton = ensureElement<HTMLButtonElement>('.header__basket');
         this._counter = ensureElement<HTMLElement>('.header__basket-counter');
 

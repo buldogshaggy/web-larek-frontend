@@ -12,6 +12,7 @@ import { ensureElement, cloneTemplate } from './utils/utils';
 import { Contacts } from './components/Contacts';
 import { BasketItem } from './components/BasketItem';
 import { Success } from './components/Success';
+import { Page } from './components/Page';
 
 const events = new EventEmitter();
 const api = new Api(API_URL);
@@ -37,6 +38,7 @@ const basket = new Basket(cloneTemplate(templates.basket), events);
 const order = new Order(cloneTemplate(templates.order), events);
 const contacts = new Contacts(cloneTemplate(templates.contacts), events);
 const success = new Success(cloneTemplate(templates.success), events);
+const page = new Page();
 
 //Загрузка товаров
 api.get('/product')
@@ -45,29 +47,15 @@ api.get('/product')
     })
     .catch(console.error);
 
-function renderCatalog(products: IProduct[]) {
-    const galleryContainer = ensureElement<HTMLElement>('.gallery');
-    galleryContainer.innerHTML = '';
-    
-    products.forEach(item => {
-        const card = new Card(templates.cardCatalog, item, (product) => {
-            events.emit('card:open', product);
-        });
-        galleryContainer.appendChild(card.render());
-    });
-}
-
 //Обработчики событий
 events.on('items:changed', (items: IProduct[]) => {
-    const galleryContainer = ensureElement<HTMLElement>('.gallery');
-    galleryContainer.innerHTML = '';
-    
-    items.forEach(item => {
+    const cards = items.map(item => {
         const card = new Card(templates.cardCatalog, item, (product) => {
             events.emit('card:open', product);
         });
-        galleryContainer.appendChild(card.render());
+        return card.render();
     });
+    page.renderCatalog(cards);
 });
 
 events.on('card:open', (item: IProduct) => {
@@ -99,13 +87,8 @@ events.on('card:add', (item: IProduct) => {
 });
 
 events.on('basket:open', () => {
-    //Создаем элементы корзины
     const basketItems = appData.basket.map((item, index) => {
-        const basketItem = new BasketItem(templates.basketItem, item, index);
-        basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
-            events.emit('basket:remove', { id: item.id });
-        });
-        return basketItem.container;
+        return new BasketItem(templates.basketItem, item, index, events).container;
     });
 
     //Обновляем корзину
@@ -118,13 +101,8 @@ events.on('basket:open', () => {
 });
 
 events.on('basket:change', () => {
-    //Создаем элементы корзины
     const basketItems = appData.basket.map((item, index) => {
-        const basketItem = new BasketItem(templates.basketItem, item, index);
-        basketItem.container.querySelector('.basket__item-delete')?.addEventListener('click', () => {
-            events.emit('basket:remove', { id: item.id });
-        });
-        return basketItem.container;
+        return new BasketItem(templates.basketItem, item, index, events).container;
     });
 
     //Обновляем корзину
@@ -146,8 +124,11 @@ events.on('order:open', () => {
 
 events.on('order:submit', (order: Partial<IOrder>) => {
     appData.updateOrder(order);
-    const contacts = new Contacts(cloneTemplate(templates.contacts), events);
     modal.content = contacts.render();
+    events.emit('contacts:validation', {
+        email: contacts.elements.emailInput.value,
+        phone: contacts.elements.phoneInput.value
+    });
     modal.open();
 });
 
@@ -164,6 +145,11 @@ events.on('order:success', () => {
     modal.close();
     appData.clearBasket();
     events.emit('basket:change');
+});
+
+events.on('contacts:validated', (data: { errors: Record<string, string>, valid: boolean }) => {
+    contacts.setErrors(data.errors);
+    contacts.setValid(data.valid);
 });
 
 events.on('contacts:submit', (data: { email: string; phone: string }) => {
